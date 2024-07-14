@@ -1,17 +1,11 @@
 document.addEventListener('DOMContentLoaded', () => {
     const navLinks = document.querySelectorAll('nav ul li a');
     const comparisonContainers = document.querySelectorAll('.comparison-container');
-    const prevButton = document.getElementById('prevPage');
-    const nextButton = document.getElementById('nextPage');
-    const pageIndicator = document.querySelector('.page-indicator');
-
-    let currentPage = 0;
-    let totalPages = 0;
 
     function showSection(sectionId) {
         comparisonContainers.forEach(container => {
             if (container.id === `comparison-container-${sectionId}`) {
-                container.style.display = 'block';
+                container.style.display = 'flex';
                 setupPageNavigation(container);
             } else {
                 container.style.display = 'none';
@@ -19,37 +13,70 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    function syncScroll(container) {
+        const viewers = container.querySelectorAll('.doc-viewer');
+        viewers.forEach(viewer => {
+            viewer.addEventListener('scroll', (e) => {
+                const otherViewer = e.target === viewers[0] ? viewers[1] : viewers[0];
+                otherViewer.scrollTop = e.target.scrollTop;
+            });
+        });
+    }
+
     function setupPageNavigation(container) {
         const imageContainers = container.querySelectorAll('.image-container');
-        const images1 = imageContainers[0].querySelectorAll('img');
-        const images2 = imageContainers[1].querySelectorAll('img');
-        totalPages = images1.length; // Assuming both containers have the same number of pages
+        imageContainers.forEach((imgContainer) => {
+            const images = imgContainer.querySelectorAll('img');
+            let currentPage = 0;
 
-        function updateButtons() {
-            prevButton.disabled = currentPage === 0;
-            nextButton.disabled = currentPage === totalPages - 1;
-            pageIndicator.textContent = `Page ${currentPage + 1} of ${totalPages}`;
-        }
+            // Remove existing navigation if any
+            const existingNav = imgContainer.nextElementSibling;
+            if (existingNav && existingNav.className === 'page-nav') {
+                existingNav.remove();
+            }
 
-        function showPage(pageIndex) {
-            images1[currentPage].style.display = 'none';
-            images2[currentPage].style.display = 'none';
-            images1[pageIndex].style.display = 'block';
-            images2[pageIndex].style.display = 'block';
-            currentPage = pageIndex;
+            // Create navigation buttons
+            const nav = document.createElement('div');
+            nav.className = 'page-nav';
+            const prevButton = document.createElement('button');
+            prevButton.textContent = 'Previous';
+            const nextButton = document.createElement('button');
+            nextButton.textContent = 'Next';
+            const pageIndicator = document.createElement('span');
+            pageIndicator.className = 'page-indicator';
+            nav.appendChild(prevButton);
+            nav.appendChild(pageIndicator);
+            nav.appendChild(nextButton);
+            imgContainer.after(nav);
+
+            // Show first image, hide others
+            images.forEach((img, index) => {
+                img.style.display = index === 0 ? 'block' : 'none';
+            });
+
+            function updateButtons() {
+                prevButton.disabled = currentPage === 0;
+                nextButton.disabled = currentPage === images.length - 1;
+                pageIndicator.textContent = `Page ${currentPage + 1} of ${images.length}`;
+            }
+
+            function showPage(pageIndex) {
+                images[currentPage].style.display = 'none';
+                images[pageIndex].style.display = 'block';
+                currentPage = pageIndex;
+                updateButtons();
+            }
+
+            prevButton.addEventListener('click', () => {
+                if (currentPage > 0) showPage(currentPage - 1);
+            });
+
+            nextButton.addEventListener('click', () => {
+                if (currentPage < images.length - 1) showPage(currentPage + 1);
+            });
+
             updateButtons();
-        }
-
-        prevButton.addEventListener('click', () => {
-            if (currentPage > 0) showPage(currentPage - 1);
         });
-
-        nextButton.addEventListener('click', () => {
-            if (currentPage < totalPages - 1) showPage(currentPage + 1);
-        });
-
-        // Initialize navigation
-        showPage(0);
     }
 
     navLinks.forEach(link => {
@@ -62,8 +89,9 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // Initialize: show the first section and set up navigation
+    // Initialize: show the first section and set up scroll syncing
     showSection('sop');
+    comparisonContainers.forEach(syncScroll);
 
     // Set the first nav link as active
     navLinks[0].classList.add('active');
